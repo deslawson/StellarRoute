@@ -38,6 +38,7 @@ export const ArrowLeftRight = Icon;
 export const ArrowRightLeft = Icon;
 export const Check = Icon;
 export const Clock = Icon;
+export const Clock3 = Icon;
 export const Copy = Icon;
 export const History = Icon;
 export const Search = Icon;
