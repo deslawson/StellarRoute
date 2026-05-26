@@ -17,6 +17,14 @@ vi.mock("@/components/providers/wallet-provider", () => ({
   }),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 function createQuoteResponse(overrides?: Partial<Record<string, unknown>>) {
   return {
     base_asset: { asset_type: "native" },
