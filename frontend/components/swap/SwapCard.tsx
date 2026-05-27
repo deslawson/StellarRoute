@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useSwapI18n } from '@/lib/swap-i18n';
 import { quoteExportToCsv, type QuoteExportPayload } from '@/lib/quote-export';
+import { toTraderErrorLine, getTraderErrorCopy } from '@/lib/api/trader-error-copy';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import {
   Dialog,
@@ -232,6 +233,10 @@ export function SwapCard() {
     quote.priceImpact,
     requiresFreshQuote,
   ]);
+
+  const quoteErrorLine = quote.error
+    ? toTraderErrorLine(getTraderErrorCopy(quote.error))
+    : null;
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -766,7 +771,7 @@ export function SwapCard() {
               'text-center text-xs font-medium text-destructive',
               !prefersReducedMotion && 'animate-pulse'
             )}>
-              {quote.error.message}
+              {quoteErrorLine}
             </p>
           )}
         </CardContent>
