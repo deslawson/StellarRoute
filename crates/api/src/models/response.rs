@@ -132,6 +132,9 @@ pub struct QuoteResponse {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data_freshness: Option<DataFreshness>,
+    /// Cryptographic signature verifying the quote provenance 
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signature: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -250,6 +253,8 @@ pub enum ApiErrorCode {
     InvalidAsset,
     NoRoute,
     StaleMarketData,
+    /// Quote has expired and cannot be executed
+    QuoteExpired,
 }
 
 impl ApiErrorCode {
@@ -265,6 +270,7 @@ impl ApiErrorCode {
             Self::InvalidAsset => "invalid_asset",
             Self::NoRoute => "no_route",
             Self::StaleMarketData => "stale_market_data",
+            Self::QuoteExpired => "quote_expired",
         }
     }
 }
