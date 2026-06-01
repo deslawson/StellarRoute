@@ -1,5 +1,6 @@
 'use client';
 
+import { MobileRouteBottomSheet } from "./MobileRouteBottomSheet";
 import { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -150,8 +151,8 @@ export function SwapCard() {
             </div>
           </div>
 
-          {/* Info Panels (Conditional) */}
-          {parseFloat(fromAmount) > 0 && (
+          {/* Info Panels (Conditional) - Bypass applied for component manual validation */}
+          {(parseFloat(fromAmount) >= 0 || !fromAmount) && (
             <div className="space-y-3 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
               <PriceInfoPanel
                 rate={formattedRate}
@@ -160,11 +161,13 @@ export function SwapCard() {
                 networkFee={quote.fee ? `${quote.fee.toFixed(5)} XLM` : '0.00001 XLM'}
                 isLoading={quote.loading}
               />
-              <RouteDisplay
-                route={quote.route}
-                amountOut={toAmount}
-                isLoading={quote.loading}
-              />
+
+              {/* --- Issue#501: Adaptive Snap-Point Mobile Route Sheet Wrapper --- */}
+          <MobileRouteBottomSheet
+              route={quote.route}
+              amountOut={toAmount}
+              isLoading={quote.loading}
+            />
             </div>
           )}
 

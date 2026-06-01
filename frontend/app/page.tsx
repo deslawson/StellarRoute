@@ -1,15 +1,22 @@
-import DemoSwap from "@/components/DemoSwap";
+"use client";
+
+import { SwapCard } from "@/components/swap/SwapCard";
 
 export default function Home() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center">StellarRoute</h1>
-      <p className="text-muted-foreground mt-2 text-center mb-12">
-        DEX Aggregator - Frontend Ready
-      </p>
+    <main className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-8 bg-background">
+      <div className="w-full max-w-xl mx-auto space-y-6 pt-12 md:pt-20">
+        <div className="text-center space-y-2 mb-4">
+          <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent">
+            StellarRoute Exchange
+          </h1>
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+            Multi-hop smart asset router offering optimized settlement paths across liquidity nodes.
+          </p>
+        </div>
 
-      <DemoSwap />
-    </div>
+        <SwapCard />
+      </div>
+    </main>
   );
 }
-
