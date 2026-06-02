@@ -497,18 +497,16 @@ pub async fn get_batch_quotes(
                 };
 
                 match get_quote_inner(state, base_asset, quote_asset, params, false).await {
-                    Ok((quote, _cache_hit)) => {
-                        match quote.into_quote() {
-                            Ok(inner) => BatchQuoteItemResult::ok(i, inner),
-                            Err(e) => BatchQuoteItemResult::err(
-                                i,
-                                BatchItemError {
-                                    code: "internal".to_string(),
-                                    message: e.to_string(),
-                                },
-                            ),
-                        }
-                    }
+                    Ok((quote, _cache_hit)) => match quote.into_quote() {
+                        Ok(inner) => BatchQuoteItemResult::ok(i, inner),
+                        Err(e) => BatchQuoteItemResult::err(
+                            i,
+                            BatchItemError {
+                                code: "internal".to_string(),
+                                message: e.to_string(),
+                            },
+                        ),
+                    },
                     Err(e) => {
                         let (code, message) = batch_error_from_api_error(&e);
                         BatchQuoteItemResult::err(i, BatchItemError { code, message })
@@ -1666,6 +1664,22 @@ mod tests {
         assert_eq!(selected.venue_ref, "offer1");
         assert_eq!(rationale.selected_source, "sdex:offer1");
         assert_eq!(rationale.compared_venues.len(), 3);
+    }
+
+    #[test]
+    fn native_usdc_quote_prefers_lowest_executable_direct_price() {
+        let candidates = vec![
+            candidate("amm", "pool-native-usdc", 1.02, 100.0, 30),
+            candidate("sdex", "offer-native-usdc-b", 1.01, 80.0, 0),
+            candidate("sdex", "offer-native-usdc-a", 0.99, 60.0, 0),
+        ];
+
+        let (selected, rationale) =
+            evaluate_single_hop_direct_venues(candidates, 50.0).expect("must select a venue");
+
+        assert_eq!(selected.venue_type, "sdex");
+        assert_eq!(selected.venue_ref, "offer-native-usdc-a");
+        assert_eq!(rationale.selected_source, "sdex:offer-native-usdc-a");
     }
 
     #[test]
