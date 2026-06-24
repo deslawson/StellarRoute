@@ -295,8 +295,6 @@ import path from "path";
  * @returns {{ totalKb: number, asyncChunks: Array<{ name: string, sizeKb: number }> }}
  */
 export function parseBundleSize(buildDir) {
-  const manifestPath = path.join(buildDir, "build-manifest.json");
-
   if (!fs.existsSync(buildDir)) {
     console.error(
       `[perf-budget] ERROR: Build directory not found at "${buildDir}". Run \`npm run build\` first.`
@@ -304,37 +302,79 @@ export function parseBundleSize(buildDir) {
     process.exit(1);
   }
 
-  if (!fs.existsSync(manifestPath)) {
-    console.error(
-      `[perf-budget] ERROR: build-manifest.json not found at "${manifestPath}". Run \`npm run build\` first.`
-    );
-    process.exit(1);
+  const clientManifestPath = path.join(buildDir, "server/app/swap/page_client-reference-manifest.js");
+  const manifestPath = path.join(buildDir, "build-manifest.json");
+  const swapChunks = new Set();
+
+  if (fs.existsSync(clientManifestPath)) {
+    // Next.js App Router client manifest parsing
+    const content = fs.readFileSync(clientManifestPath, "utf8");
+    const lines = content.split("\n");
+    const targetLine = lines.find(line => line.startsWith('globalThis.__RSC_MANIFEST["/swap/page"]'));
+    if (!targetLine) {
+      console.error(
+        `[perf-budget] ERROR: Could not find swap page manifest line in "${clientManifestPath}"`
+      );
+      process.exit(1);
+    }
+    const startIndex = targetLine.indexOf("{");
+    const endIndex = targetLine.lastIndexOf("}");
+    if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+      console.error(
+        `[perf-budget] ERROR: Invalid manifest line format in "${clientManifestPath}"`
+      );
+      process.exit(1);
+    }
+    const jsonStr = targetLine.slice(startIndex, endIndex + 1);
+    
+    try {
+      const manifestObj = JSON.parse(jsonStr);
+      const entryJSFiles = manifestObj.entryJSFiles ?? {};
+      const swapPageChunks = entryJSFiles["[project]/app/swap/page"] ?? [];
+      const appLayoutChunks = entryJSFiles["[project]/app/layout"] ?? [];
+      
+      for (const chunk of [...swapPageChunks, ...appLayoutChunks]) {
+        swapChunks.add(chunk);
+      }
+    } catch (e) {
+      console.error(
+        `[perf-budget] ERROR: Failed to parse RSC manifest: ${e.message}`
+      );
+      process.exit(1);
+    }
+  } else {
+    // Pages Router (fallback)
+    if (!fs.existsSync(manifestPath)) {
+      console.error(
+        `[perf-budget] ERROR: build-manifest.json not found at "${manifestPath}". Run \`npm run build\` first.`
+      );
+      process.exit(1);
+    }
+
+    let manifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    } catch (e) {
+      console.error(
+        `[perf-budget] ERROR: Failed to parse build-manifest.json: ${e.message}`
+      );
+      process.exit(1);
+    }
+
+    const pages = manifest.pages ?? {};
+
+    if (!pages["/swap"]) {
+      const available = Object.keys(pages).join(", ");
+      console.error(
+        `[perf-budget] ERROR: Route "/swap" not found in build manifest. Available routes: ${available}`
+      );
+      process.exit(1);
+    }
+
+    for (const chunk of [...(pages["/swap"] ?? []), ...(pages["/_app"] ?? [])]) {
+      swapChunks.add(chunk);
+    }
   }
-
-  let manifest;
-  try {
-    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-  } catch (e) {
-    console.error(
-      `[perf-budget] ERROR: Failed to parse build-manifest.json: ${e.message}`
-    );
-    process.exit(1);
-  }
-
-  const pages = manifest.pages ?? {};
-
-  if (!pages["/swap"]) {
-    const available = Object.keys(pages).join(", ");
-    console.error(
-      `[perf-budget] ERROR: Route "/swap" not found in build manifest. Available routes: ${available}`
-    );
-    process.exit(1);
-  }
-
-  const swapChunks = new Set([
-    ...(pages["/swap"] ?? []),
-    ...(pages["/_app"] ?? []),
-  ]);
 
   let totalBytes = 0;
   const asyncChunks = [];
@@ -342,9 +382,13 @@ export function parseBundleSize(buildDir) {
   for (const chunk of swapChunks) {
     if (!chunk.endsWith(".js")) continue;
     
-    const relativePath = chunk.startsWith("_next/")
-      ? chunk.slice("_next/".length)
-      : chunk;
+    let relativePath = chunk;
+    if (relativePath.startsWith("/")) {
+      relativePath = relativePath.slice(1);
+    }
+    if (relativePath.startsWith("_next/")) {
+      relativePath = relativePath.slice("_next/".length);
+    }
     const filePath = path.join(buildDir, relativePath);
 
     if (!fs.existsSync(filePath)) {
