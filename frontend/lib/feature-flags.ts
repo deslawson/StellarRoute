@@ -1,4 +1,4 @@
-export type FeatureFlagName = "routesBeta" | "batchSwaps";
+export type FeatureFlagName = 'routesBeta' | 'batchSwaps';
 
 export interface FeatureFlags {
   routesBeta: boolean;
@@ -18,21 +18,16 @@ const DEFAULT_FLAGS: FeatureFlags = {
   batchSwaps: false,
 };
 
-const ENV_FLAG_MAP: Record<FeatureFlagName, string> = {
-  routesBeta: "NEXT_PUBLIC_FEATURE_ROUTES_BETA",
-  batchSwaps: "NEXT_PUBLIC_FEATURE_BATCH_SWAPS",
-};
-
 function parseBooleanFlag(value: string | undefined): boolean | undefined {
   if (value === undefined) {
     return undefined;
   }
 
   const normalized = value.trim().toLowerCase();
-  if (["1", "true", "yes", "on"].includes(normalized)) {
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
     return true;
   }
-  if (["0", "false", "no", "off"].includes(normalized)) {
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
     return false;
   }
 
@@ -40,8 +35,14 @@ function parseBooleanFlag(value: string | undefined): boolean | undefined {
 }
 
 function getEnvFlags(): PartialFeatureFlags {
-  const routesBeta = parseBooleanFlag(process.env[ENV_FLAG_MAP.routesBeta]);
-  const batchSwaps = parseBooleanFlag(process.env[ENV_FLAG_MAP.batchSwaps]);
+  // Keep public env access static so Next.js can inline these values in the
+  // browser bundle.
+  const routesBeta = parseBooleanFlag(
+    process.env.NEXT_PUBLIC_FEATURE_ROUTES_BETA
+  );
+  const batchSwaps = parseBooleanFlag(
+    process.env.NEXT_PUBLIC_FEATURE_BATCH_SWAPS
+  );
 
   const flags: PartialFeatureFlags = {};
   if (routesBeta !== undefined) flags.routesBeta = routesBeta;
@@ -51,7 +52,7 @@ function getEnvFlags(): PartialFeatureFlags {
 }
 
 function getRuntimeFlags(): PartialFeatureFlags {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return {};
   }
 
@@ -59,7 +60,7 @@ function getRuntimeFlags(): PartialFeatureFlags {
 }
 
 export function getFeatureFlags(
-  overrides: PartialFeatureFlags = {},
+  overrides: PartialFeatureFlags = {}
 ): FeatureFlags {
   return {
     ...DEFAULT_FLAGS,
@@ -71,7 +72,7 @@ export function getFeatureFlags(
 
 export function getFeatureFlag(
   name: FeatureFlagName,
-  overrides: PartialFeatureFlags = {},
+  overrides: PartialFeatureFlags = {}
 ): boolean {
   return getFeatureFlags(overrides)[name];
 }

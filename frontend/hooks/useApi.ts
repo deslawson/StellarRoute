@@ -13,10 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from 'sonner';
 
-import {
-  StellarRouteApiError,
-  stellarRouteClient,
-} from '@/lib/api/client';
+import { StellarRouteApiError, stellarRouteClient } from '@/lib/api/client';
 import { QUOTE_AMOUNT_DEBOUNCE_MS } from '@/lib/quote-stale';
 import type {
   HealthStatus,
@@ -56,7 +53,7 @@ function useFetch<T>(
     refreshIntervalMs,
     skip = false,
     showToastOnError = false,
-  }: UseFetchOptions = {},
+  }: UseFetchOptions = {}
 ): UseApiState<T> & { refresh: () => void } {
   const [state, setState] = useState<UseApiState<T>>({
     data: undefined,
@@ -66,7 +63,7 @@ function useFetch<T>(
 
   // Stable ref so the interval callback always sees the latest fetcher
   const fetcherRef = useRef(fetcher);
-  
+
   useEffect(() => {
     fetcherRef.current = fetcher;
   }, [fetcher]);
@@ -93,7 +90,8 @@ function useFetch<T>(
       })
       .catch((err: unknown) => {
         if (!controller.signal.aborted) {
-          const finalError = err instanceof Error ? err : new Error(String(err));
+          const finalError =
+            err instanceof Error ? err : new Error(String(err));
           setState({
             data: undefined,
             loading: false,
@@ -101,9 +99,14 @@ function useFetch<T>(
           });
 
           if (showToastOnError) {
-            toast.error(finalError instanceof StellarRouteApiError ? "API Error" : "Fetch Error", {
-              description: finalError.message,
-            });
+            toast.error(
+              finalError instanceof StellarRouteApiError
+                ? 'API Error'
+                : 'Fetch Error',
+              {
+                description: finalError.message,
+              }
+            );
           }
         }
       });
@@ -121,7 +124,6 @@ function useFetch<T>(
 
   return { ...state, refresh };
 }
-
 
 // ---------------------------------------------------------------------------
 // Internal: simple debounce hook
@@ -149,7 +151,7 @@ export function usePairs(): UseApiState<TradingPair[]> & {
         .getPairs({ signal })
         .then((res: PairsResponse) => res.pairs),
     [],
-    { showToastOnError: true },
+    { showToastOnError: true }
   );
   return result;
 }
@@ -161,12 +163,12 @@ export function usePairs(): UseApiState<TradingPair[]> & {
 export function useOrderbook(
   base: string,
   quote: string,
-  refreshIntervalMs = 10_000,
+  refreshIntervalMs = 10_000
 ): UseApiState<Orderbook> & { refresh: () => void } {
   return useFetch(
     (signal) => stellarRouteClient.getOrderbook(base, quote, { signal }),
     [base, quote],
-    { refreshIntervalMs },
+    { refreshIntervalMs }
   );
 }
 
@@ -174,12 +176,12 @@ export function usePriceHistory(
   base: string,
   quote: string,
   refreshIntervalMs = 60_000,
-  skip = false,
+  skip = false
 ): UseApiState<PriceHistoryResponse> & { refresh: () => void } {
   return useFetch(
     (signal) => stellarRouteClient.getPriceHistory(base, quote, { signal }),
     [base, quote],
-    { refreshIntervalMs, skip: skip || !base || !quote },
+    { refreshIntervalMs, skip: skip || !base || !quote }
   );
 }
 
@@ -192,7 +194,7 @@ export function useRoutes(
   quote: string,
   amount?: number,
   limit = 5,
-  maxHops = 3,
+  maxHops = 3
 ): UseApiState<RoutesResponse> & { refresh: () => void } {
   const skip = !base || !quote;
   return useFetch(
@@ -201,7 +203,7 @@ export function useRoutes(
         signal,
       }),
     [base, quote, amount, limit, maxHops],
-    { skip },
+    { skip }
   );
 }
 
@@ -209,15 +211,13 @@ export function useRoutes(
 // useQuote — debounced amount; no request while input is invalid / empty
 // ---------------------------------------------------------------------------
 
-
-
 export function useQuote(
   base: string,
   quote: string,
   amount: number | undefined,
   type: QuoteType = 'sell',
   /** Optional polling interval. Prefer `useQuoteRefresh` for manual/auto refresh UX. */
-  refreshIntervalMs?: number,
+  refreshIntervalMs?: number
 ): UseApiState<PriceQuote> & { refresh: () => void } {
   const debouncedAmount = useDebounced(amount, QUOTE_AMOUNT_DEBOUNCE_MS);
 
@@ -236,7 +236,7 @@ export function useQuote(
         })
         .then((result) => result.quote),
     [base, quote, debouncedAmount, type],
-    { refreshIntervalMs, skip },
+    { refreshIntervalMs, skip }
   );
 }
 
@@ -249,12 +249,27 @@ import type { QuoteRequestItem, BatchQuoteResponse } from '@/lib/api/client';
 export function useBatchQuote(
   requests: QuoteRequestItem[],
   skip = false,
-  refreshIntervalMs?: number,
+  refreshIntervalMs?: number
 ): UseApiState<BatchQuoteResponse> & { refresh: () => void } {
+  const hasValidRequests =
+    requests.length > 0 &&
+    requests.every(
+      ({ base, quote, amount, quote_type }) =>
+        base.trim().length > 0 &&
+        quote.trim().length > 0 &&
+        base !== quote &&
+        amount !== undefined &&
+        Number.isFinite(amount) &&
+        amount > 0 &&
+        (quote_type === undefined ||
+          quote_type === 'sell' ||
+          quote_type === 'buy')
+    );
+
   return useFetch(
     (signal) => stellarRouteClient.getQuotesBatch(requests, { signal }),
     [JSON.stringify(requests)],
-    { refreshIntervalMs, skip: skip || requests.length === 0 },
+    { refreshIntervalMs, skip: skip || !hasValidRequests }
   );
 }
 
@@ -263,13 +278,11 @@ export function useBatchQuote(
 // ---------------------------------------------------------------------------
 
 export function useHealth(
-  refreshIntervalMs = 60_000,
+  refreshIntervalMs = 60_000
 ): UseApiState<HealthStatus> & { refresh: () => void } {
-  return useFetch(
-    (signal) => stellarRouteClient.getHealth({ signal }),
-    [],
-    { refreshIntervalMs },
-  );
+  return useFetch((signal) => stellarRouteClient.getHealth({ signal }), [], {
+    refreshIntervalMs,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -279,7 +292,7 @@ export function useHealth(
 export function useQuoteStream(
   base: string,
   quote: string,
-  amount: number | undefined,
+  amount: number | undefined
 ) {
   const [data, setData] = useState<PriceQuote | undefined>(undefined);
   const [isConnected, setIsConnected] = useState(false);
@@ -304,7 +317,8 @@ export function useQuoteStream(
     const connect = () => {
       if (!isMounted) return;
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
       const wsProtocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
       const host = baseUrl.replace(/^https?:\/\//, '');
       const wsUrl = `${wsProtocol}://${host}/api/v1/ws`;
@@ -324,7 +338,10 @@ export function useQuoteStream(
             subscription: {
               base,
               quote,
-              amount: debouncedAmount !== undefined ? String(debouncedAmount) : undefined,
+              amount:
+                debouncedAmount !== undefined
+                  ? String(debouncedAmount)
+                  : undefined,
             },
           };
           ws?.send(JSON.stringify(subscribeMsg));
@@ -364,7 +381,9 @@ export function useQuoteStream(
         };
       } catch (err) {
         if (isMounted) {
-          setError(err instanceof Error ? err : new Error('Failed to create WebSocket'));
+          setError(
+            err instanceof Error ? err : new Error('Failed to create WebSocket')
+          );
         }
       }
     };
@@ -376,10 +395,12 @@ export function useQuoteStream(
       clearTimeout(reconnectTimer);
       if (ws) {
         if (subscriptionId && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            action: 'unsubscribe',
-            subscription_id: subscriptionId,
-          }));
+          ws.send(
+            JSON.stringify({
+              action: 'unsubscribe',
+              subscription_id: subscriptionId,
+            })
+          );
         }
         ws.close();
       }
