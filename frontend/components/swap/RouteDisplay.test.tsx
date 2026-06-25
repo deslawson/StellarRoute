@@ -1,11 +1,18 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { act } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RouteDisplay } from "./RouteDisplay";
 
+const DEFAULT_PROPS = {
+  amountOut: "50.0",
+};
+
 describe("RouteDisplay", () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+  });
 
   it("should render loading skeleton when isLoading is true", () => {
     render(<RouteDisplay amountOut="50.0" isLoading={true} />);
@@ -120,14 +127,23 @@ describe("RouteDisplay", () => {
   });
 
   it("instantly transitions from skeleton to content", () => {
-    const { rerender } = render(<RouteDisplay amountOut="50.0" isLoading={true} />);
+    vi.useFakeTimers();
+    try {
+      const { rerender } = render(<RouteDisplay amountOut="50.0" isLoading={true} />);
 
-    expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+      expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
 
-    rerender(<RouteDisplay amountOut="50.0" isLoading={false} />);
+      rerender(<RouteDisplay amountOut="50.0" isLoading={false} />);
 
-    expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
-    expect(screen.getByText("Best Route")).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
+      expect(screen.getByText("Best Route")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

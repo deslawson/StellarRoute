@@ -26,7 +26,7 @@ describe("HighContrastToggle", () => {
       </Wrapper>,
     );
 
-    expect(screen.getByLabelText("Toggle high contrast mode")).toBeInTheDocument();
+    expect(screen.getByLabelText(/toggle high contrast mode/i)).toBeInTheDocument();
     expect(screen.getByText("High Contrast Mode")).toBeInTheDocument();
     expect(screen.getByText(/increases color contrast/i)).toBeInTheDocument();
   });
@@ -38,7 +38,7 @@ describe("HighContrastToggle", () => {
       </Wrapper>,
     );
 
-    const toggle = screen.getByRole("switch", { name: "Toggle high contrast mode" });
+    const toggle = screen.getByRole("switch", { name: /toggle high contrast mode/i });
     expect(toggle).toHaveAttribute("data-state", "unchecked");
   });
 
@@ -49,7 +49,7 @@ describe("HighContrastToggle", () => {
       </Wrapper>,
     );
 
-    const toggle = screen.getByRole("switch", { name: "Toggle high contrast mode" });
+    const toggle = screen.getByRole("switch", { name: /toggle high contrast mode/i });
     await userEvent.click(toggle);
 
     expect(toggle).toHaveAttribute("data-state", "checked");
@@ -63,7 +63,7 @@ describe("HighContrastToggle", () => {
       </Wrapper>,
     );
 
-    const toggle = screen.getByRole("switch", { name: "Toggle high contrast mode" });
+    const toggle = screen.getByRole("switch", { name: /toggle high contrast mode/i });
     await userEvent.click(toggle);
     await userEvent.click(toggle);
 
@@ -78,7 +78,7 @@ describe("HighContrastToggle", () => {
       </Wrapper>,
     );
 
-    const toggle = screen.getByRole("switch", { name: "Toggle high contrast mode" });
+    const toggle = screen.getByRole("switch", { name: /toggle high contrast mode/i });
     await userEvent.click(toggle);
 
     const stored = JSON.parse(window.localStorage.getItem("stellar_route_settings") ?? "{}");

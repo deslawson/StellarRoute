@@ -88,5 +88,8 @@ export const BellOff = Icon;
 // Share icon
 export const Share2 = Icon;
 
+// Split icon
+export const Split = Icon;
+
 
 

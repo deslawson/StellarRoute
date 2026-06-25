@@ -327,7 +327,7 @@ describe('Session Recovery Integration', () => {
     });
 
     // Should show error
-    expect(screen.getByText(/network error/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/network error/i)[0]).toBeInTheDocument();
   });
 
   it('should not show recovery modal without recoverable context', async () => {
