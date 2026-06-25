@@ -18,6 +18,7 @@ export function WalletButton() {
   const {
     address,
     isConnected,
+    network,
     walletNetwork,
     availableWallets,
     isLoading,
@@ -26,22 +27,15 @@ export function WalletButton() {
     disconnect,
   } = useWallet();
 
-  const shortAddress = useMemo(() => {
-    if (!address) return '';
-    return `${address.slice(0, 4)}...${address.slice(-4)}`;
-  }, [address]);
+  const shortAddress = address
+    ? `${address.slice(0, 4)}...${address.slice(-4)}`
+    : '';
 
-  const copyAddress = useCallback(async () => {
-    if (!address) return;
-
-    try {
-      await navigator.clipboard.writeText(address);
-    } catch {
-      // Clipboard access may be denied in some browsers.
+  const copyAddress = () => {
+    if (address) {
+      void navigator.clipboard.writeText(address);
     }
-  }, [address]);
-
-  const errorMessage = error?.message ?? null;
+  };
 
   const {
     showOnboarding,
@@ -64,10 +58,15 @@ export function WalletButton() {
     }
   }, [showOnboarding, isFirstConnection, showOnboardingModal, markOnboardingAsSeenAndOpened]);
 
-  const handleOnboardingConnect = async (walletId: Parameters<typeof connect>[0]) => {
-    await connect(walletId);
-    setWalletNetworkForOnboarding(walletNetwork ?? null);
-    markOnboardingAsCompleted();
+  const handleOnboardingConnect = async (walletId: any) => {
+    try {
+      await connect(walletId);
+      setWalletNetworkForOnboarding(walletNetwork ?? null);
+      markOnboardingAsCompleted();
+    } catch (err) {
+      // Error will be shown in onboarding modal
+      throw err;
+    }
   };
 
   if (!isConnected) {
@@ -85,7 +84,7 @@ export function WalletButton() {
           onOpenChange={setShowOnboardingModal}
           availableWallets={availableWallets}
           isLoading={isLoading}
-          error={errorMessage}
+          error={error?.message ?? null}
           onConnect={handleOnboardingConnect}
           walletNetwork={walletNetworkForOnboarding}
         />
@@ -157,7 +156,7 @@ export function WalletButton() {
       )}
 
       <div className="text-sm text-muted-foreground">
-        Wallet network: {walletNetwork ?? 'Unknown'}
+        Wallet network: {walletNetwork ?? network ?? 'Unknown'}
       </div>
 
       {mismatch && (
@@ -166,7 +165,7 @@ export function WalletButton() {
         </div>
       )}
 
-      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+      {error && <p className="text-sm text-destructive">{error.message}</p>}
     </div>
   );
 }
