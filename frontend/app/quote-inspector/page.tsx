@@ -2,7 +2,10 @@
 
 import { QuoteInspector, VenueQuote } from "@/components/shared/QuoteInspector";
 import { toast } from "sonner";
-import { Header } from "@/components/Header";
+
+// Note: The canonical Header is provided by AppShell in the root layout.
+// Do NOT import or render a standalone <Header /> here — that caused a double
+// header (Issue #740). AppShell already wraps every page in the app router.
 
 const MOCK_TIMESTAMP = 1713895200; // Fixed timestamp to satisfy purity rule
 
@@ -73,25 +76,22 @@ export default function QuoteInspectorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="text-center space-y-2">
-            <h1 className="text-4xl font-black tracking-tight text-foreground">
-              Quote Reconciliation
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Analyze and reconcile liquidity paths across multiple Stellar venues.
-            </p>
-          </div>
-
-          <QuoteInspector 
-            quotes={mockQuotes} 
-            onSelect={handleSelect} 
-          />
+    <div className="container mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-black tracking-tight text-foreground">
+            Quote Reconciliation
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Analyze and reconcile liquidity paths across multiple Stellar venues.
+          </p>
         </div>
-      </main>
+
+        <QuoteInspector 
+          quotes={mockQuotes} 
+          onSelect={handleSelect} 
+        />
+      </div>
     </div>
   );
 }

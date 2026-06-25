@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation"
 import { Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-//import { WalletButton } from "@/components/shared/WalletButton"
+import { WalletButton } from "@/components/shared/wallet-button"
 import { NetworkBadge } from "@/components/shared/network-badge"
+import { NotificationInbox } from "@/components/NotificationInbox"
 import { MobileNav } from "./mobile-nav"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "../ThemeToggle"
@@ -89,8 +90,9 @@ export function Header() {
             <NetworkBadge />
             <ThemeToggle />
           </div>
+          <NotificationInbox />
           <div className="hidden md:block">
-           {/* <WalletButton /> */}
+            <WalletButton />
           </div>
 
           {/* Mobile Menu Button */}
