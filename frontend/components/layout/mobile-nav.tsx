@@ -9,7 +9,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-// import { WalletButton } from "@/components/shared/WalletButton"
+//import { WalletButton } from "@/components/shared/WalletButton"
 import { NetworkBadge } from "@/components/shared/network-badge"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "../ThemeToggle"
@@ -95,10 +95,10 @@ export function MobileNav({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Theme</span>
-            <ThemeToggle />
+            <ThemeToggle data-testid="mobile-theme-toggle" />
           </div>
           <div className="pt-2">
-            {/* <WalletButton /> */}
+           {/* <WalletButton /> */}
           </div>
         </div>
       </SheetContent>

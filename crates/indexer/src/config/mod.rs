@@ -1,9 +1,21 @@
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum HorizonMode {
+    #[default]
+    Poll,
+    Sse,
+}
+
+#[derive(Clone, Deserialize)]
 pub struct IndexerConfig {
     /// Horizon base URL, e.g. `https://horizon.stellar.org` or `https://horizon-testnet.stellar.org`
     pub stellar_horizon_url: String,
+
+    /// Ingestion mode for SDEX offers
+    #[serde(default)]
+    pub horizon_mode: HorizonMode,
 
     /// Soroban RPC base URL
     pub soroban_rpc_url: String,
@@ -61,6 +73,51 @@ pub struct IndexerConfig {
     /// Snapshot compaction after threshold hours (env: `SNAPSHOT_COMPACTION_HOURS`).
     #[serde(default = "default_snapshot_compaction_hours")]
     pub snapshot_compaction_hours: i32,
+
+    // New partitioning configuration
+    /// Number of partitions for workload distribution (env: `INDEXER_PARTITION_COUNT`).
+    #[serde(default = "default_partition_count")]
+    pub partition_count: usize,
+
+    /// Comma‑separated list of hot pair identifiers (e.g., "XLM/USD,USDC/EUR").
+    #[serde(default = "default_hot_pair_allowlist")]
+    pub hot_pair_allowlist: String,
+
+    /// Volume threshold (in native units) to consider a pair hot (env: `INDEXER_HOT_VOLUME_THRESHOLD`).
+    #[serde(default = "default_hot_pair_volume_threshold")]
+    pub hot_pair_volume_threshold: u64,
+
+    /// Window in seconds for detecting hot pairs based on recent volume.
+    #[serde(default = "default_hot_pair_window_secs")]
+    pub hot_pair_window_secs: u64,
+
+    /// Identifier of this partition instance (env: `INDEXER_PARTITION_ID`).
+    #[serde(default = "default_partition_id")]
+    pub partition_id: usize,
+}
+
+impl std::fmt::Debug for IndexerConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IndexerConfig")
+            .field("stellar_horizon_url", &self.stellar_horizon_url)
+            .field("horizon_mode", &self.horizon_mode)
+            .field("soroban_rpc_url", &self.soroban_rpc_url)
+            .field("router_contract_address", &self.router_contract_address)
+            .field("database_url", &"[REDACTED]")
+            .field("poll_interval_secs", &self.poll_interval_secs)
+            .field("amm_poll_interval_secs", &self.amm_poll_interval_secs)
+            .field("stale_threshold_secs", &self.stale_threshold_secs)
+            .field("horizon_limit", &self.horizon_limit)
+            .field("max_connections", &self.max_connections)
+            .field("min_connections", &self.min_connections)
+            .field("connection_timeout_secs", &self.connection_timeout_secs)
+            .field("idle_timeout_secs", &self.idle_timeout_secs)
+            .field("max_lifetime_secs", &self.max_lifetime_secs)
+            .field("maintenance_interval_mins", &self.maintenance_interval_mins)
+            .field("snapshot_retention_days", &self.snapshot_retention_days)
+            .field("snapshot_compaction_hours", &self.snapshot_compaction_hours)
+            .finish()
+    }
 }
 
 fn default_poll_interval_secs() -> u64 {
@@ -111,6 +168,24 @@ fn default_snapshot_compaction_hours() -> i32 {
     24
 }
 
+fn default_partition_id() -> usize {
+    0
+}
+
+// New defaults for partitioning and hot‑pair detection
+fn default_partition_count() -> usize {
+    4
+}
+fn default_hot_pair_allowlist() -> String {
+    String::new()
+}
+fn default_hot_pair_volume_threshold() -> u64 {
+    1_000_000_000
+}
+fn default_hot_pair_window_secs() -> u64 {
+    300
+}
+
 impl IndexerConfig {
     pub fn load() -> std::result::Result<Self, config::ConfigError> {
         let cfg = config::Config::builder()
@@ -121,6 +196,26 @@ impl IndexerConfig {
 
     /// Convenience constructor from environment variables.
     pub fn from_env() -> std::result::Result<Self, config::ConfigError> {
+        let required = [
+            "DATABASE_URL",
+            "STELLAR_HORIZON_URL",
+            "SOROBAN_RPC_URL",
+            "ROUTER_CONTRACT_ADDRESS",
+        ];
+        let mut missing = Vec::new();
+        for key in required {
+            match std::env::var(key) {
+                Ok(value) if !value.trim().is_empty() => {}
+                _ => missing.push(key),
+            }
+        }
+        if !missing.is_empty() {
+            return Err(config::ConfigError::Message(format!(
+                "Missing required environment variable(s): {}",
+                missing.join(", ")
+            )));
+        }
+
         Self::load()
     }
 }

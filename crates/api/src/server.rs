@@ -1,7 +1,6 @@
 //! API server setup and configuration
 
 use axum::{http::Request, Router};
-use sqlx::PgPool;
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::{
     compression::CompressionLayer,
@@ -16,16 +15,17 @@ use crate::{
     cache::CacheManager,
     docs::ApiDoc,
     error::Result,
+    health_scheduler::{HealthScheduler, HealthSchedulerConfig},
     middleware::{
-        api_versioning_layer, request_id_layer, EndpointConfig, RateLimitLayer, RequestId,
-        REQUEST_ID_HEADER,
+        api_versioning_layer, request_id_layer, AuthLayer, EndpointConfig, RateLimitLayer,
+        RequestId, REQUEST_ID_HEADER,
     },
     routes,
     state::{AppState, CachePolicy, DatabasePools},
 };
 
 /// API server configuration
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ServerConfig {
     /// Server host address
     pub host: String,
@@ -37,8 +37,23 @@ pub struct ServerConfig {
     pub enable_compression: bool,
     /// Redis URL (optional)
     pub redis_url: Option<String>,
+    /// Admin bearer token for operator-only endpoints
+    pub admin_auth_token: Option<String>,
     /// Quote cache TTL in seconds
     pub quote_cache_ttl_seconds: u64,
+}
+
+impl std::fmt::Debug for ServerConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ServerConfig")
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("enable_cors", &self.enable_cors)
+            .field("enable_compression", &self.enable_compression)
+            .field("redis_url", &self.redis_url.as_ref().map(|_| "[REDACTED]"))
+            .field("quote_cache_ttl_seconds", &self.quote_cache_ttl_seconds)
+            .finish()
+    }
 }
 
 impl Default for ServerConfig {
@@ -49,6 +64,7 @@ impl Default for ServerConfig {
             enable_cors: true,
             enable_compression: true,
             redis_url: None,
+            admin_auth_token: std::env::var("ADMIN_AUTH_TOKEN").ok(),
             quote_cache_ttl_seconds: 2,
         }
     }
@@ -66,6 +82,9 @@ impl Server {
         let cache_policy = CachePolicy {
             quote_ttl: std::time::Duration::from_secs(config.quote_cache_ttl_seconds),
         };
+
+        // Clone the write pool so the scheduler can use it independently.
+        let scheduler_pool = db.write_pool().clone();
 
         // Try to connect to Redis if URL is provided
         let (state, rate_limit_layer) = if let Some(redis_url) = &config.redis_url {
@@ -91,30 +110,39 @@ impl Server {
                         }
                     };
 
-                    (
-                        Arc::new(AppState::with_cache_and_policy(
-                            db,
-                            cache,
-                            cache_policy.clone(),
-                        )),
-                        rate_limit,
-                    )
+                    {
+                        let mut state =
+                            AppState::with_cache_and_policy(db, cache, cache_policy.clone());
+                        state.admin_auth_token = config.admin_auth_token.clone();
+                        (Arc::new(state), rate_limit)
+                    }
                 }
                 Err(e) => {
                     warn!("⚠️  Redis connection failed, running without cache: {}", e);
-                    (
-                        Arc::new(AppState::new_with_policy(db, cache_policy.clone())),
-                        RateLimitLayer::in_memory(EndpointConfig::default()),
-                    )
+                    {
+                        let mut state = AppState::new_with_policy(db, cache_policy.clone());
+                        state.admin_auth_token = config.admin_auth_token.clone();
+                        (
+                            Arc::new(state),
+                            RateLimitLayer::in_memory(EndpointConfig::default()),
+                        )
+                    }
                 }
             }
         } else {
             info!("ℹ️  Running without Redis cache");
-            (
-                Arc::new(AppState::new_with_policy(db, cache_policy)),
-                RateLimitLayer::in_memory(EndpointConfig::default()),
-            )
+            {
+                let mut state = AppState::new_with_policy(db, cache_policy);
+                state.admin_auth_token = config.admin_auth_token.clone();
+                (
+                    Arc::new(state),
+                    RateLimitLayer::in_memory(EndpointConfig::default()),
+                )
+            }
         };
+
+        // Start the background health score recomputation scheduler.
+        HealthScheduler::start(scheduler_pool, HealthSchedulerConfig::from_env());
 
         let app = Self::build_app(state, &config, rate_limit_layer);
 
@@ -151,6 +179,9 @@ impl Server {
 
         // Add rate limiting (innermost — runs before CORS/compression in the response path)
         app = app.layer(rate_limit);
+
+        // Add API key authentication
+        app = app.layer(AuthLayer::default());
 
         // Add request logging — each request gets a unique span with method, URI, status, and latency.
         app = app.layer(
@@ -190,7 +221,12 @@ impl Server {
         app
     }
 
-    /// Start the server
+    /// Start the server with graceful shutdown support.
+    ///
+    /// The server listens for `SIGTERM` / `SIGINT` and enters a drain window
+    /// before exiting.  New requests are rejected with `503` during the drain
+    /// window; in-flight requests are allowed to complete up to
+    /// `SHUTDOWN_DRAIN_TIMEOUT_S` seconds (default: 30).
     pub async fn start(self) -> Result<()> {
         let addr: SocketAddr = format!("{}:{}", self.config.host, self.config.port)
             .parse()
@@ -199,14 +235,26 @@ impl Server {
         info!("🚀 StellarRoute API server starting on http://{}", addr);
         info!("📊 Health check: http://{}/health", addr);
         info!("📈 Trading pairs: http://{}/api/v1/pairs", addr);
-        info!("� Prometheus metrics: http://{}/metrics", addr);
-        info!("�📚 API Documentation: http://{}/swagger-ui", addr);
+        info!("📉 Prometheus metrics: http://{}/metrics", addr);
+        info!("📚 API Documentation: http://{}/swagger-ui", addr);
 
         let listener = tokio::net::TcpListener::bind(addr)
             .await
             .expect("Failed to bind address");
 
-        axum::serve(listener, self.app).await.expect("Server error");
+        let shutdown = crate::shutdown::ShutdownSignal::new();
+        info!(
+            drain_timeout_secs = shutdown.drain_timeout.as_secs(),
+            "Graceful shutdown configured"
+        );
+
+        let shutdown_clone = shutdown.clone();
+        axum::serve(listener, self.app)
+            .with_graceful_shutdown(async move {
+                shutdown_clone.wait_for_signal().await;
+            })
+            .await
+            .expect("Server error");
 
         Ok(())
     }

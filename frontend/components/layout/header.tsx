@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { Menu } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-// import { WalletButton } from "@/components/shared/WalletButton"
+//import { WalletButton } from "@/components/shared/WalletButton"
 import { NetworkBadge } from "@/components/shared/network-badge"
 import { MobileNav } from "./mobile-nav"
 import { cn } from "@/lib/utils"
@@ -19,7 +19,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Swap", href: "/" },
+  { label: "Swap", href: "/swap" },
   { label: "Orderbook", href: "/orderbook" },
   { label: "History", href: "/history" },
   // Future routes - disabled for now
@@ -49,9 +49,9 @@ export function Header() {
         {/* Logo and Navigation */}
         <div className="flex items-center gap-6 md:gap-8">
           <Link
-            href="/"
+            href="/swap"
             className="flex items-center gap-2 font-semibold text-xl hover:opacity-80 transition-opacity"
-            aria-label="StellarRoute Home"
+            aria-label="StellarRoute Swap"
           >
             <span className="text-primary">StellarRoute</span>
           </Link>
@@ -87,10 +87,10 @@ export function Header() {
         <div className="flex items-center gap-2">
           <div className="max-sm:hidden">
             <NetworkBadge />
-            <ThemeToggle />
           </div>
+          <ThemeToggle />
           <div className="hidden md:block">
-           {/* <WalletButton /> */}
+            {/* <WalletButton /> */}
           </div>
 
           {/* Mobile Menu Button */}
