@@ -42,6 +42,9 @@ export type {
   PriceQuote,
   QuoteStalenessConfig,
   QuoteType,
+  RankedRouteCandidate,
+  RankedRouteHop,
+  RankedRoutesResponse,
   TradingPair,
 } from './types.js';
 
