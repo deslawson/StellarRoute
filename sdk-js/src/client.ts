@@ -350,7 +350,24 @@ export class StellarRouteClient {
   }
 
   /**
-   * `GET /api/v1/price-history/{base}/{quote}` — fetch price history for charting/sparklines.
+   * `POST /api/v1/batch/orderbook` ? fetch multiple orderbook snapshots in a single request.
+   */
+  async getOrderbooksBatch(
+    requests: OrderbookRequestItem[],
+    signal?: AbortSignal,
+  ): Promise<BatchOrderbookResponse> {
+    const path = '/api/v1/batch/orderbook';
+    return this.request<BatchOrderbookResponse>(
+      path,
+      signal,
+      this.retries,
+      'POST',
+      { requests },
+    );
+  }
+
+  /**
+   * `GET /api/v1/price-history/{base}/{quote}` ? fetch price history for charting/sparklines.
    *
    * @param base  Base asset identifier: `"native"`, `"CODE"`, or `"CODE:ISSUER"`.
    * @param quote Quote asset identifier.
