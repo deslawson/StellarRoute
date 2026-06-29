@@ -496,6 +496,21 @@ const SWAP_TRANSLATIONS: Record<SupportedSwapLocale, SwapTranslations> = {
     "swap.shortcuts.focusPayAmount": "Enfocar cantidad de pago",
     "swap.shortcuts.focusReceiveAmount": "Enfocar cantidad a recibir",
     "swap.shortcuts.refreshQuote": "Actualizar cotización",
+    "swap.iconography.disclosure": "Leyenda de iconos de ruta y transacción",
+    "swap.iconography.eyebrow": "Sistema de iconografía",
+    "swap.iconography.title": "Iconos de ruta y transacción",
+    "swap.iconography.description":
+      "Los iconos coherentes ayudan a distinguir tipos de venue, rutas híbridas y estados del ciclo de vida de la transacción.",
+    "swap.iconography.venueTypes": "Tipos de venue",
+    "swap.iconography.venueTypes.sdex":
+      "SDEX representa operaciones en el libro de órdenes. AMM indica intercambios en pools de liquidez.",
+    "swap.iconography.venueTypes.hybrid":
+      "Las rutas híbridas combinan ambos tipos de venue para un enrutamiento óptimo.",
+    "swap.iconography.transactionStates": "Estados de transacción",
+    "swap.iconography.sizingNote":
+      "Los iconos están dimensionados para legibilidad en pantalla a 16/20/24px. Usa trazos ligeros para insignias pequeñas y un grosor moderado para indicadores de ruta más grandes.",
+    "swap.iconography.assetFallbackNote":
+      "Los iconos de activos usan iniciales en mayúsculas cuando no hay una imagen válida disponible.",
     "swap.a11y.quoteRefreshed": "Quote updated. {rate}",
     "swap.a11y.quoteRefreshedGeneric": "Quote updated.",
     "swap.a11y.quoteRefreshFailed": "Quote refresh failed. {message}",
